@@ -1,0 +1,113 @@
+#include "BluetoothSerial.h"
+
+// Create a Bluetooth Serial object
+BluetoothSerial SerialBT;
+
+// Motor control pins for L298N
+const int motorLeftForward = 15;
+const int motorLeftBackward = 2;
+const int motorRightForward = 4;
+const int motorRightBackward = 5; // Changed to GPIO 5, which is available
+
+// Flag to check Bluetooth connection status
+bool isBluetoothConnected = false;
+
+void setup() {
+  // Initialize serial communication for debugging
+  Serial.begin(115200);
+  
+  // Initialize Bluetooth Serial with a device name
+  SerialBT.begin("ESP32_Robot"); // Name shown on Bluetooth devices
+  Serial.println("Waiting for Bluetooth connection...");
+
+  // Set motor pins as outputs and ensure they are LOW initially
+  pinMode(motorLeftForward, OUTPUT);
+  pinMode(motorLeftBackward, OUTPUT);
+  pinMode(motorRightForward, OUTPUT);
+  pinMode(motorRightBackward, OUTPUT);
+
+  stopMotors(); // Ensure motors are stopped at the start
+}
+
+void loop() {
+  // Check Bluetooth connection status
+  if (SerialBT.hasClient()) {
+    if (!isBluetoothConnected) {
+      isBluetoothConnected = true; // Update connection status
+      Serial.println("Bluetooth connected! Ready to receive commands.");
+    }
+  } else {
+    if (isBluetoothConnected) {
+      isBluetoothConnected = false; // Update connection status
+      Serial.println("Bluetooth disconnected! Stopping motors.");
+      stopMotors(); // Stop motors if Bluetooth is disconnected
+    }
+    return; // Skip further processing until Bluetooth reconnects
+  }
+
+  // Process commands only when Bluetooth is connected
+  if (SerialBT.available()) {
+    String command = SerialBT.readStringUntil('\n'); // Read the command
+    
+    // Remove leading/trailing whitespace
+    command.trim();
+
+    Serial.println("Command Received: " + command);
+    
+    // Handle commands
+    if (command.equalsIgnoreCase("move forward")) {
+      moveForward();
+    } else if (command.equalsIgnoreCase("move backward")) {
+      moveBackward();
+    } else if (command.equalsIgnoreCase("turn right")) {
+      turnRight();
+    } else if (command.equalsIgnoreCase("turn left")) {
+      turnLeft();
+    } else if (command.equalsIgnoreCase("stop")) {
+      stopMotors();
+    } else {
+      Serial.println("Unknown Command!");
+    }
+  }
+}
+
+// Function to move forward
+void moveForward() {
+  stopMotors(); // Stop any ongoing motion
+  digitalWrite(motorLeftForward, HIGH);
+  digitalWrite(motorRightForward, HIGH);
+  Serial.println("Moving Forward");
+}
+
+// Function to move backward
+void moveBackward() {
+  stopMotors(); // Stop any ongoing motion
+  digitalWrite(motorLeftBackward, HIGH);
+  digitalWrite(motorRightBackward, HIGH);
+  Serial.println("Moving Backward");
+}
+
+// Function to turn right
+void turnRight() {
+  stopMotors(); // Stop any ongoing motion
+  digitalWrite(motorLeftForward, HIGH); // Left motor forward
+  digitalWrite(motorRightBackward, HIGH); // Right motor backward
+  Serial.println("Turning Right");
+}
+
+// Function to turn left
+void turnLeft() {
+  stopMotors(); // Stop any ongoing motion
+  digitalWrite(motorLeftBackward, HIGH); // Left motor backward
+  digitalWrite(motorRightForward, HIGH); // Right motor forward
+  Serial.println("Turning Left");
+}
+
+// Function to stop motors
+void stopMotors() {
+  digitalWrite(motorLeftForward, LOW);
+  digitalWrite(motorLeftBackward, LOW);
+  digitalWrite(motorRightForward, LOW);
+  digitalWrite(motorRightBackward, LOW);
+  Serial.println("Motors Stopped");
+}
